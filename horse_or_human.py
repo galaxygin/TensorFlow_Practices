@@ -8,6 +8,14 @@ from matplotlib import pyplot as plt
 from tensorflow import keras
 
 class_names = ['Horse', 'Human']
+target_size = (300, 300)
+horse_files = os.listdir("datasets/validation-horse-or-human/horses")
+human_files = os.listdir("datasets/validation-horse-or-human/humans")
+total_train = len(os.listdir("datasets/horse-or-human/horses")) + len(os.listdir("datasets/horse-or-human/humans"))
+total_val = len(horse_files) + len(human_files)
+epochs = 50
+batch_size = 16
+BatchNormalization = keras.layers.BatchNormalization
 
 
 class Model:
@@ -41,17 +49,17 @@ class Model:
         self.model = keras.models.Sequential([
             # Note the input shape is the desired size of the image 150x150 with 3 bytes color
             # This is the first convolution
-            keras.layers.Conv2D(64, (3, 3), activation='relu', input_shape=(300, 300, 3)),
+            keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(300, 300, 3)),
             keras.layers.MaxPooling2D(2, 2),
             # The second convolution
-            keras.layers.Conv2D(128, (3, 3), activation='relu'),
+            keras.layers.Conv2D(32, (3, 3), activation='relu'),
             keras.layers.MaxPooling2D(2, 2),
             # The third convolution
-            keras.layers.Conv2D(256, (3, 3), activation='relu'),
+            keras.layers.Conv2D(64, (3, 3), activation='relu'),
             keras.layers.MaxPooling2D(2, 2),
             # The fourth convolution
-            keras.layers.Conv2D(512, (3, 3), activation='relu'),
-            keras.layers.MaxPooling2D(2, 2),
+            # keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            # keras.layers.MaxPooling2D(2, 2),
             # Flatten the results to feed into a DNN
             keras.layers.Flatten(),
             keras.layers.Dropout(0.5),
@@ -66,39 +74,40 @@ class Model:
     def prepare_images(self):
         self.training_generator = ImageDataGenerator(
             rescale=1. / 255,
-            rotation_range=40,
-            width_shift_range=0.2,
-            height_shift_range=0.2,
             shear_range=0.2,
             zoom_range=0.2,
             horizontal_flip=True,
-            fill_mode="nearest"
         ).flow_from_directory(
             "datasets/horse-or-human/",
-            target_size=(300, 300),
+            target_size=target_size,
             class_mode="binary",
-            batch_size=128)
+            shuffle=True,
+            batch_size=batch_size)
         self.validation_generator = ImageDataGenerator(rescale=1. / 255) \
             .flow_from_directory(
             "datasets/validation-horse-or-human/",
-            target_size=(300, 300),
+            target_size=target_size,
             class_mode="binary",
-            batch_size=32)
+            batch_size=batch_size)
         return self
 
     def train(self):
         self.model.compile(loss="binary_crossentropy", optimizer='rmsprop', metrics=['accuracy'])
-        history = self.model.fit(self.training_generator, epochs=100, verbose=1,
-                                 validation_data=self.validation_generator)
+        history = self.model.fit(self.training_generator, epochs=epochs, steps_per_epoch=total_train // batch_size,
+                                 validation_data=self.validation_generator, validation_steps=total_val // batch_size)
         self.model.save("horse-human_model")
-        epochs = range(len(history.history['accuracy']))
-        plt.plot(epochs, history.history['accuracy'], 'r', label='Training accuracy')
-        plt.plot(epochs, history.history['val_accuracy'], 'b', label='Validation accuracy')
-        plt.plot(epochs, history.history['loss'], 'g', label='Training loss')
-        plt.plot(epochs, history.history['val_loss'], 'y', label='validation_loss')
-        plt.title('Training and validation accuracy')
-        plt.legend(loc=0)
-        plt.figure()
+        epochs_range = range(epochs)
+        plt.figure(figsize=(8, 8))
+        plt.subplot(1, 2, 1)
+        plt.plot(epochs_range, history.history['accuracy'], 'r', label='Training accuracy')
+        plt.plot(epochs_range, history.history['val_accuracy'], 'b', label='Validation accuracy')
+        plt.legend(loc="lower right")
+        plt.title("Training and Validation accuracy")
+        plt.subplot(1, 2, 2)
+        plt.plot(epochs_range, history.history['loss'], 'g', label='Training loss')
+        plt.plot(epochs_range, history.history['val_loss'], 'y', label='validation_loss')
+        plt.legend("upper right")
+        plt.title('Training and validation loss')
         plt.show()
         return self
 
@@ -167,27 +176,24 @@ class TrainedModel:
             return
         if not self.get_validation_path():
             return 
-        print("Validating horses (" + str(len(os.listdir(self.base_path + "/horses"))) + ")")
+        print("Validating horses (" + str(len(horse_files)) + ")")
         horse_wrong_predictions = []
-        for index in range(len(os.listdir(self.base_path + "/horses"))):
-            x = keras_image.img_to_array(
-                keras_image.load_img(self.base_path + '/horses/' + os.listdir(self.base_path + '/horses')[index],
-                                     target_size=(300, 300)))
+        for index in range(len(horse_files)):
+            x = keras_image.img_to_array(keras_image.load_img(self.base_path + '/horses/' + horse_files[index], target_size=target_size))
             x = np.expand_dims(x, axis=0)
             prediction = self.model.predict(np.vstack([x]))
             if prediction[0][0] == 1:
-                horse_wrong_predictions.append(os.listdir(self.base_path + '/horses')[index])
+                horse_wrong_predictions.append(human_files[index])
         print("Number of wrong predictions: " + str(len(horse_wrong_predictions)) + ", " + str(horse_wrong_predictions))
-        print("Validating humans (" + str(len(os.listdir(self.base_path + "/humans"))) + ")")
+        print("Validating humans (" + str(len(human_files)) + ")")
         human_wrong_predictions = []
-        for index in range(len(os.listdir(self.base_path + "/humans"))):
+        for index in range(len(human_files)):
             x = keras_image.img_to_array(
-                keras_image.load_img(self.base_path + '/humans/' + os.listdir(self.base_path + '/humans')[index],
-                                     target_size=(300, 300)))
+                keras_image.load_img(self.base_path + '/humans/' + human_files[index], target_size=target_size))
             x = np.expand_dims(x, axis=0)
             prediction = self.model.predict(np.vstack([x]))
             if prediction[0][0] == 0:
-                human_wrong_predictions.append(os.listdir(self.base_path + '/humans')[index])
+                human_wrong_predictions.append(human_files[index])
         print("Number of wrong predictions: " + str(len(human_wrong_predictions)) + ", " + str(human_wrong_predictions))
         
         

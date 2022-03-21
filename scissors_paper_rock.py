@@ -8,6 +8,14 @@ from keras_preprocessing.image import ImageDataGenerator
 from tensorflow import keras
 
 class_names = ['Paper', 'Rock', 'Scissors']
+target_size = (300, 300)
+paper_files = os.listdir("datasets/validation-rps/paper")
+rock_files = os.listdir("datasets/validation-rps/rock")
+scissors_files = os.listdir("datasets/validation-rps/scissors")
+total_train = len(os.listdir("datasets/rps/rock")) + len(os.listdir("datasets/rps/paper")) + len(os.listdir("datasets/rps/scissors"))
+total_val = len(paper_files) + len(rock_files) + len(scissors_files)
+epochs = 25
+batch_size = 128
 
 
 class Model:
@@ -31,7 +39,7 @@ class Model:
             keras.layers.Dropout(0.5),
             # 64 neuron hidden layer
             keras.layers.Dense(64, activation='relu'),
-            keras.layers.Dense(3, activation='softmax')
+            keras.layers.Dense(len(class_names), activation='softmax')
         ])
         self.training_generator = None
         self.validation_generator = None
@@ -48,30 +56,34 @@ class Model:
             fill_mode='nearest'
         ).flow_from_directory(
             "datasets/rps/",
-            target_size=(300, 300),
+            target_size=target_size,
             class_mode='categorical',
-            batch_size=128)
+            batch_size=batch_size)
         self.validation_generator = ImageDataGenerator(rescale=1. / 255) \
             .flow_from_directory(
             "datasets/validation-rps",
-            target_size=(300, 300),
+            target_size=target_size,
             class_mode='categorical',
-            batch_size=32)
+            batch_size=batch_size)
         return self
 
     def train(self):
         self.model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
-        history = self.model.fit(self.training_generator, epochs=100, verbose=1,
-                                 validation_data=self.validation_generator)
+        history = self.model.fit(self.training_generator, epochs=epochs, steps_per_epoch=total_train // batch_size,
+                                 validation_data=self.validation_generator, validation_steps=total_val // batch_size)
         self.model.save("rps_model")
-        epochs = range(len(history.history['accuracy']))
-        plt.plot(epochs, history.history['accuracy'], 'r', label='Training accuracy')
-        plt.plot(epochs, history.history['val_accuracy'], 'b', label='Validation accuracy')
-        plt.plot(epochs, history.history['loss'], 'g', label='Training loss')
-        plt.plot(epochs, history.history['val_loss'], 'y', label='validation_loss')
-        plt.title('Training and validation accuracy')
-        plt.legend(loc=0)
-        plt.figure()
+        epochs_range = range(epochs)
+        plt.figure(figsize=(8, 8))
+        plt.subplot(1, 2, 1)
+        plt.plot(epochs_range, history.history["accuracy"], label='Training Accuracy')
+        plt.plot(epochs_range, history.history['val_accuracy'], label='Validation Accuracy')
+        plt.legend(loc='lower right')
+        plt.title('Training and Validation Accuracy')
+        plt.subplot(1, 2, 2)
+        plt.plot(epochs_range, history.history['loss'], label='Training Loss')
+        plt.plot(epochs_range, history.history['val_loss'], label='Validation Loss')
+        plt.legend(loc='upper right')
+        plt.title('Training and Validation Loss')
         plt.show()
         return self
 
@@ -141,48 +153,39 @@ class TrainedModel:
             return
         if not self.get_validation_path():
             return 
-        print("Validating papers (" + str(len(os.listdir(self.base_path + "/paper"))) + ")")
+        print("Validating papers (" + str(len(paper_files)) + ")")
         paper_wrong_predictions = []
-        for index in range(len(os.listdir(self.base_path + "/paper"))):
-            x = keras_image.img_to_array(
-                keras_image.load_img(self.base_path + '/paper/' + os.listdir(self.base_path + '/paper')[index],
-                                     target_size=(300, 300)))
+        for index in range(len(paper_files)):
+            x = keras_image.img_to_array(keras_image.load_img(self.base_path + '/paper/' + paper_files[index], target_size=target_size))
             x = np.expand_dims(x, axis=0)
             if class_names[np.argmax(self.model.predict(np.vstack([x])))] != "Paper":
-                paper_wrong_predictions.append(os.listdir(self.base_path + '/paper')[index])
+                paper_wrong_predictions.append(paper_files[index])
         print("Number of wrong predictions: " + str(len(paper_wrong_predictions)) + ", " + str(paper_wrong_predictions))
-        print("Validating rocks (" + str(len(os.listdir(self.base_path + "/rock"))) + ")")
+        print("Validating rocks (" + str(len(rock_files)) + ")")
         rock_wrong_predictions = []
-        for index in range(len(os.listdir(self.base_path + "/rock"))):
-            x = keras_image.img_to_array(
-                keras_image.load_img(self.base_path + '/rock/' + os.listdir(self.base_path + '/rock')[index],
-                                     target_size=(300, 300)))
+        for index in range(len(rock_files)):
+            x = keras_image.img_to_array(keras_image.load_img(self.base_path + '/rock/' + rock_files[index], target_size=target_size))
             x = np.expand_dims(x, axis=0)
             if class_names[np.argmax(self.model.predict(np.vstack([x])))] != "Rock":
-                rock_wrong_predictions.append(os.listdir(self.base_path + '/rock')[index])
+                rock_wrong_predictions.append(rock_files[index])
         print("Number of wrong predictions: " + str(len(rock_wrong_predictions)) + ", " + str(rock_wrong_predictions))
-        print("Validating scissors (" + str(len(os.listdir(self.base_path + "/scissors"))) + ")")
+        print("Validating scissors (" + str(len(scissors_files)) + ")")
         scissors_wrong_predictions = []
-        for index in range(len(os.listdir(self.base_path + "/scissors"))):
-            x = keras_image.img_to_array(
-                keras_image.load_img(self.base_path + '/scissors/' + os.listdir(self.base_path + '/scissors')[index],
-                                     target_size=(300, 300)))
+        for index in range(len(scissors_files)):
+            x = keras_image.img_to_array(keras_image.load_img(self.base_path + '/scissors/' + scissors_files[index], target_size=target_size))
             x = np.expand_dims(x, axis=0)
             if class_names[np.argmax(self.model.predict(np.vstack([x])))] != "Scissors":
-                scissors_wrong_predictions.append(os.listdir(self.base_path + '/scissors')[index])
-        print("Number of wrong predictions: " + str(len(scissors_wrong_predictions)) + ", " + str(
-            scissors_wrong_predictions))
+                scissors_wrong_predictions.append(scissors_files[index])
+        print("Number of wrong predictions: " + str(len(scissors_wrong_predictions)) + ", " + str(scissors_wrong_predictions))
 
     def evaluate(self):
         if not self.get_model():
             return
         if not self.get_validation_path():
             return 
-        print("Validating papers (" + str(len(os.listdir(self.base_path + "/paper"))) + ")")
-        for index in range(len(os.listdir(self.base_path + "/paper"))):
-            x = keras_image.img_to_array(
-                keras_image.load_img(self.base_path + '/paper/' + os.listdir(self.base_path + '/paper')[index],
-                                     target_size=(300, 300)))
+        print("Validating papers (" + str(paper_files) + ")")
+        for index in range(len(paper_files)):
+            x = keras_image.img_to_array(keras_image.load_img(self.base_path + '/paper/' + paper_files[index], target_size=target_size))
             x = np.expand_dims(x, axis=0)
             print(self.model.evaluate(np.vstack([x])))
 
