@@ -1,59 +1,85 @@
-import fashion_mnist
+import airplane_classifier
+import cat_or_dog
+import fashion_classifier
+import flower_classifier
 import horse_or_human
-import image_classification
+import fashion_mnist
 import number_rule_prediction
 import scissors_paper_rock
+import sex_classifier
 
-models = ['1: Scissors Paper Rock', '2: Horse or Human', '3: Fashion mnist', '4: Fashion classify',
-          "5: Rule of numbers"]
+models = ['1: Rule of numbers', '2: Fashion mnist', '3: Fashion', '4: Scissors Paper Rock', '5: Horse or Human',
+          '6: Flowers', '7: Cat or Dog', '8: Airplanes']
+trained_num_rule = number_rule_prediction.TrainedModel()
+trained_fashion_mnist = fashion_mnist.TrainedModel()
+trained_fashion = fashion_classifier.TrainedModel()
 trained_rps = scissors_paper_rock.TrainedModel()
 trained_horse_or_human = horse_or_human.TrainedModel()
-trained_fashion_mnist = fashion_mnist.TrainedModel()
-trained_fashion_classify = image_classification.TrainedModel()
-trained_num_rule = number_rule_prediction.TrainedModel()
+trained_flowers = flower_classifier.TrainedModel()
+trained_cat_or_dog = cat_or_dog.TrainedModel()
+trained_airplanes = airplane_classifier.TrainedModel()
+trained_sex = sex_classifier.TrainedModel()
 
 
 def train_model(selection):
     if selection == "1":
-        scissors_paper_rock.conduct_training()
-    if selection == "2":
-        horse_or_human.conduct_training()
-    if selection == "3":
-        fashion_mnist.conduct_training()
-    if selection == "4":
-        image_classification.conduct_training()
-    if selection == "5":
         number_rule_prediction.conduct_training()
+    if selection == "2":
+        fashion_mnist.conduct_training()
+    if selection == "3":
+        fashion_classifier.conduct_training()
+    if selection == "4":
+        scissors_paper_rock.conduct_training()
+    if selection == "5":
+        horse_or_human.conduct_training()
+    if selection == "6":
+        flower_classifier.conduct_training()
+    if selection == "7":
+        cat_or_dog.conduct_training()
+    if selection == "8":
+        airplane_classifier.conduct_training()
     print("Done")
     menu()
 
 
 def make_prediction(selection):
     if selection == "1":
-        trained_rps.predict()
-    if selection == "2":
-        trained_horse_or_human.predict()
-    if selection == "3":
-        trained_fashion_mnist.predict()
-    if selection == "4":
-        trained_fashion_classify.predict()
-    if selection == "5":
         trained_num_rule.predict()
+    if selection == "2":
+        trained_fashion_mnist.predict()
+    if selection == "3":
+        trained_fashion.predict()
+    if selection == "4":
+        trained_rps.predict()
+    if selection == "5":
+        trained_horse_or_human.predict()
+    if selection == "6":
+        trained_flowers.predict()
+    if selection == "7":
+        trained_cat_or_dog.predict()
+    if selection == "8":
+        trained_airplanes.predict()
     print("Done")
     menu()
 
 
 def model_summary(selection):
     if selection == "1":
-        trained_rps.summary()
-    if selection == "2":
-        trained_horse_or_human.summary()
-    if selection == "3":
-        trained_fashion_mnist.evaluate()
-    if selection == "4":
-        trained_fashion_classify.summary()
-    if selection == "5":
         trained_num_rule.summary()
+    if selection == "2":
+        trained_fashion_mnist.evaluate()
+    if selection == "3":
+        trained_fashion.summary()
+    if selection == "4":
+        trained_rps.summary()
+    if selection == "5":
+        trained_horse_or_human.summary()
+    if selection == "6":
+        trained_flowers.summary()
+    if selection == "7":
+        trained_cat_or_dog.summary()
+    if selection == "8":
+        trained_airplanes.summary()
     menu()
 
 
